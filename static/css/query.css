@@ -1,0 +1,18 @@
+body {
+    background: linear-gradient(135deg, cyan, magenta);
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    color: white;
+    text-align: center;
+}
+
+.container {
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+}

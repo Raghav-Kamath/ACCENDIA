@@ -36,7 +36,8 @@ def query_file():
         # For now, let's assume a placeholder function and display a message
         result = custom_query_function()
         return render_template('query.html', result=result)
-    return render_template('query.html')
+    # For GET request, display a message
+    return "Query function will be implemented later."
 
 def custom_query_function():
     # Implement your querying logic here
