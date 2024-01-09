@@ -1,3 +1,4 @@
 # ACCENDIA
 
-Advanced Chatbot for Customized Engagement and Navigation in Database Interaction
+Welcome to Advanced Chatbot for Customized Engagement and Navigation in Database Interaction
+
