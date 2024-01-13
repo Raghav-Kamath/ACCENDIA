@@ -8,7 +8,7 @@ The ACCENDIA is a Python application that allows you to chat with multiple PDF d
 ## How It Works
 ------------
 
-![ACCENDIA DIAGRAM](./docs/PDF-LangChain.jpg)
+![ACCENDIA DIAGRAM](docs\PDF-LangChain.jpg)
 
 The application follows these steps to provide responses to your questions:
 
