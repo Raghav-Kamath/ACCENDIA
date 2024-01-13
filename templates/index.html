@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF File Upload and Query</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF File Upload and Query</h1>
+        <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data">
+            <button type="submit">Upload PDF File</button>
+        </form>
+
+        <br><br>
+
+        <form action="{{ url_for('query_file') }}" method="POST">
+            <label for="query">Type your query:</label><br>
+            <textarea id="query" name="query" rows="2" cols="100"></textarea><br><br>
+            <button type="submit">Query</button>
+        </form>
+    </div>
+
+    <script>
+        const textarea = document.getElementById('query');
+        textarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            
+        });
+    </script>
+</body>
+</html>
