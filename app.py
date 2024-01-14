@@ -27,14 +27,16 @@ def upload_file(project_id):
         app.logger.info("File uploaded successfully")
 
     response = {
-        'content':  'PDF uploaded successfully'
+        'content':  'PDF uploaded successfully',
+        'path': filepath,
     }
     return response
 
 @app.route('/api/extract/<project_id>', methods=['POST'])
-def extract_content(data, project_id):
+def extract_content(project_id):
     with app.app_context():
         global index, doc
+        data = request.get_json()
         filepath = data['filepath']
         app.logger.info("Extracting content from: " + filepath)
         

@@ -1,12 +1,13 @@
 from pypdf import PdfReader
+import re
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 def parse_pdf(file):
-    pdf = PdfReader
+    pdf = PdfReader(file)
     output = []
     for page in pdf.pages:
-        text = page.extract_content()
+        text = page.extract_text()
         # Merge hyphenated words
         text = re.sub(r"(\w+)-\n(\w+)", r"\1\2", text)
         # Fix newlines in the middle of sentences
