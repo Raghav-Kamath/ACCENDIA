@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
 import config
+from utils import parse_pdf, text_to_docs
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
@@ -36,7 +37,9 @@ def extract_content(data, project_id):
         global index, doc
         filepath = data['filepath']
         app.logger.info("Extracting content from: " + filepath)
-        #processing here
+        
+        doc = parse_pdf(filepath)
+        text = text_to_docs
 
         response = {
             'content': 'PDF extracted successfully'
