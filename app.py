@@ -1,51 +1,34 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Check if uploads folder exists, if not, create it
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
+@app.route('/api/upload/<project_id>', methods=['POST'])
+def upload_file(project_id):
+    if project_id == '':
+        raise Exception("Error: Empty pid")
+    files = request.files.getlist('file')
+    for file in files:
+        print(file.filename)
         if file.filename == '':
-            return redirect(request.url)
-        if file:
-            filename = file.filename
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('index'))
-    return render_template('upload.html')
+            raise Exception("Error: Empty file")
+        if not file.filename.endswith('.pdf'):
+            raise Exception("Error: Invalid file type")
+        save_dir = './data/'+project_id
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        file.save(os.path.join(save_dir, file.filename))
+        filepath = os.path.join(save_dir, file.filename)
+        app.logger.info("File uploaded successfully")
 
-@app.route('/query', methods=['GET', 'POST'])
-def query_file():
-    if request.method == 'POST':
-        # Call your custom function for querying here
-        # Implement your functionality to query the uploaded PDF files
-        # For now, let's assume a placeholder function and display a message
-        result = custom_query_function()
-        return render_template('query.html', result=result)
-    # For GET request, display a message
-    return "Query function will be implemented later."
-
-def custom_query_function():
-    # Implement your querying logic here
-    # This function will be called when the user queries the PDF files
-    # You can access the uploaded PDF files in the 'uploads' folder
-    # Perform your query logic and return the result
-    # For now, let's return a placeholder message
-    return "Query function will be implemented later."
+    response = {
+        'content':  'PDF uploaded successfully'
+    }
+    return response
+        
 
 if __name__ == '__main__':
     app.run(debug=True)
