@@ -31,4 +31,6 @@ def upload_file(project_id):
         
 
 if __name__ == '__main__':
+    app.secret_key = config.SECRET_KEY
     app.run(debug=True)
+
