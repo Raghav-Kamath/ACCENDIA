@@ -32,8 +32,8 @@ def upload_file(project_id):
     }
     return response
 
-@app.route('/api/extract/<project_id>', methods=['POST'])
-def extract_content(project_id):
+@app.route('/api/extract', methods=['POST'])
+def extract_content():
     with app.app_context():
         global index, doc
         data = request.get_json()
