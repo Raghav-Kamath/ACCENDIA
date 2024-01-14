@@ -39,7 +39,8 @@ def extract_content(data, project_id):
         app.logger.info("Extracting content from: " + filepath)
         
         doc = parse_pdf(filepath)
-        text = text_to_docs
+        text = text_to_docs(doc)
+        print(text)
 
         response = {
             'content': 'PDF extracted successfully'
