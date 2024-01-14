@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
+import config
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
