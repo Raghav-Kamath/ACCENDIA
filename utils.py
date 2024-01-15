@@ -2,6 +2,9 @@ from pypdf import PdfReader
 import re
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+import os
+from langchain.vectorstores import FAISS
 
 def parse_pdf(file):
     pdf = PdfReader(file)
@@ -50,3 +53,8 @@ def text_to_docs(text):
             doc_chunks.append(doc)   
     
     return doc_chunks
+
+def embed_docs(docs):
+    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
+    index = FAISS.from_documents(docs, embeddings)
+    return index
