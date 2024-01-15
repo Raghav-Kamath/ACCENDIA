@@ -2,12 +2,11 @@ from pypdf import PdfReader
 import re
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_openai import OpenAIEmbeddings
-# from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, OpenAI
 import os
-# from langchain.vectorstores import FAISS
 from langchain_community.vectorstores import FAISS
+from langchain.chains.qa_with_sources import load_qa_with_sources_chain
+from prompt import get_prompt
 
 def parse_pdf(file):
     pdf = PdfReader(file)
@@ -61,3 +60,19 @@ def embed_docs(docs):
     embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
     index = FAISS.from_documents(docs, embeddings)
     return index
+
+def search_docs(index, query):
+    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])  # type: ignore
+
+    embeded_vector = embeddings.embed_query(query)
+    docs = index.similarity_search_by_vector(embeded_vector, k=5)
+    return docs
+
+def get_answer(docs, data):
+    query, prompt = get_prompt(data)
+    chain = load_qa_with_sources_chain(OpenAI(temperature=0, openai_api_key=os.environ['OPENAI_API_KEY']), chain_type="stuff", prompt=prompt)
+    answer = chain(
+        {"input_documents": docs, "question": query, "query": query}, return_only_outputs=True
+    )
+    
+    return answer
