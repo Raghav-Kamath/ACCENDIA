@@ -1,1 +1,1 @@
-OPENAI_API_KEY="paste-your-key-here"
+OPENAI_API_KEY="paste-your-api-key-here"
