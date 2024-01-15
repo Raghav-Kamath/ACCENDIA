@@ -1,51 +1,88 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 import os
+import config
+from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from openai import OpenAIError
 
 app = Flask(__name__)
+CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Check if uploads folder exists, if not, create it
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
+@app.route('/api/upload/<project_id>', methods=['POST'])
+def upload_file(project_id):
+    if project_id == '':
+        raise Exception("Error: Empty pid")
+    files = request.files.getlist('file')
+    for file in files:
+        print(file.filename)
         if file.filename == '':
-            return redirect(request.url)
-        if file:
-            filename = file.filename
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('index'))
-    return render_template('upload.html')
+            raise Exception("Error: Empty file")
+        if not file.filename.endswith('.pdf'):
+            raise Exception("Error: Invalid file type")
+        save_dir = './data/'+project_id
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        file.save(os.path.join(save_dir, file.filename))
+        filepath = os.path.join(save_dir, file.filename)
+        app.logger.info("File uploaded successfully")
 
-@app.route('/query', methods=['GET', 'POST'])
-def query_file():
-    if request.method == 'POST':
-        # Call your custom function for querying here
-        # Implement your functionality to query the uploaded PDF files
-        # For now, let's assume a placeholder function and display a message
-        result = custom_query_function()
-        return render_template('query.html', result=result)
-    # For GET request, display a message
-    return "Query function will be implemented later."
+    response = {
+        'content':  'PDF uploaded successfully',
+        'path': filepath,
+    }
+    return response
 
-def custom_query_function():
-    # Implement your querying logic here
-    # This function will be called when the user queries the PDF files
-    # You can access the uploaded PDF files in the 'uploads' folder
-    # Perform your query logic and return the result
-    # For now, let's return a placeholder message
-    return "Query function will be implemented later."
+@app.route('/api/extract/<project_id>', methods=['POST'])
+def extract_content(project_id):
+    with app.app_context():
+        global index, doc
+        data = request.get_json()
+        filepath = data['filepath']
+        app.logger.info("Extracting content from: " + filepath)
+        
+        doc = parse_pdf(filepath)
+        text = text_to_docs(doc)
+        print(text)
+        index = embed_docs(text)
+        index.save_local('./data/'+project_id+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
+        print(index)
+        os.remove(filepath)
+
+        response = {
+            'content': 'PDF extracted successfully'
+        }
+        return response
+
+@app.route('/api/<projectID>/query', methods=['POST'])
+def handle_query(projectID):
+    data = request.get_json()
+    pid, query = projectID, data['prompt']
+    if pid == '':
+        raise Exception('Error: Empty pid')
+    if not os.path.exists('./data/'+pid+'/index'):
+        raise Exception('Error: Index not found')
+    # Handle context passing into get_answer func
+    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
+    for idx in os.listdir('./data/'+pid+'/index'):
+        index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
+        sources = search_docs(index, query)
+        try:
+            answer = get_answer(sources, data)
+            app.logger.info("Sources", sources)
+            app.logger.info("Answers", answer)
+        except OpenAIError as e:
+            app.logger.error(e._message)
+
+    response = {
+        'content': answer["output_text"].split("SOURCES: ")[0],
+    }
+
+    return response
 
 if __name__ == '__main__':
+    app.secret_key = config.SECRET_KEY
     app.run(debug=True)
+
