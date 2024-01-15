@@ -32,8 +32,8 @@ def upload_file(project_id):
     }
     return response
 
-@app.route('/api/extract', methods=['POST'])
-def extract_content():
+@app.route('/api/extract/<project_id>', methods=['POST'])
+def extract_content(project_id):
     with app.app_context():
         global index, doc
         data = request.get_json()
@@ -42,9 +42,11 @@ def extract_content():
         
         doc = parse_pdf(filepath)
         text = text_to_docs(doc)
+        print(text)
         index = embed_docs(text)
-        index.save_local('./data/'+pid+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
+        index.save_local('./data/'+project_id+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
         print(index)
+        os.remove(filepath)
 
         response = {
             'content': 'PDF extracted successfully'

@@ -2,8 +2,11 @@ from pypdf import PdfReader
 import re
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+# from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
+# from langchain.embeddings import OpenAIEmbeddings
 import os
+# from langchain.vectorstores import FAISS
 from langchain_community.vectorstores import FAISS
 
 def parse_pdf(file):
