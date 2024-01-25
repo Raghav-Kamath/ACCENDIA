@@ -12,3 +12,5 @@ psycopg2
 google-generativeai
 flask_caching
 langchain_google_genai
+nltk
+textblob

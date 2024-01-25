@@ -7,7 +7,43 @@ import os
 from langchain_community.vectorstores import FAISS
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from prompt import get_prompt
+import tiktoken
+import openai
+from nltk.corpus import stopwords
+from textblob import TextBlob
 
+enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+
+def rem_sw(text):
+    stop_words = set(stopwords.words('english'))
+    stop_words = stop_words.union({"hello", "bye", "hi", "how", "need"})
+    text = TextBlob(text).correct()
+    tokens = text.words
+    filter_word = [word for word in tokens if word.lower() not in stop_words]
+    filter_word = re.sub(r"[^\w\s]", '', ' '.join(filter_word))
+
+    return filter_word
+
+def get_completion(hist, message):
+    temp = hist
+    split_messages = []
+    token_count = 0
+    for msg in temp:
+        content_tokens = len(enc.encode(msg["content"]))
+        if token_count + content_tokens <= 3500:
+            split_messages.append(msg)
+            token_count += content_tokens
+        else:
+            break
+
+    split_messages.append({"role": "user", "content": message})
+    chat = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo", messages=split_messages, temperature=0, top_p=0, frequency_penalty=0
+    )
+    reply = chat.choices[0].message.content
+    split_messages.append({"role": "assistant", "content": reply})
+
+    return split_messages, reply
 
 def parse_pdf(file):
     pdf = PdfReader(file)

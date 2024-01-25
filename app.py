@@ -138,8 +138,46 @@ def handle_query(pid, query, idx, data):
         app.logger.error(e._message)
 
     response = {
-        # 'content': answer["output_text"].split("SOURCES: ")[0],
-        'content': answer,
+        'content': answer["output_text"].split("SOURCES: ")[0],
+    }
+
+    return response
+
+@celery.task(name='app.handle_query', compression='zlib')
+def genai_handle_query(pid, query, idx, data):
+    # Handle context passing into get_answer func
+    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
+    index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
+    sources = search_docs(index, query)
+    messages =[]
+    try:
+        cache_key = generate_cache_key(query)
+        output = cache.get(cache_key)
+        if not (output is None):
+            return jsonify(output)
+        print(session.get('chat_obj'))
+        if session.get('chat_obj') is None:
+            chat = None
+            print("Session created")
+        else:
+            chat = session['chat_obj']
+            print("Session exists")
+        answer, chat = get_answer(sources, data, chat)
+
+        for m in chat.history:
+            messages.append({'role':m.role, 'parts':[m.parts[0].text]})
+        session['chat_obj'] = messages
+        app.logger.info("Sources", sources)
+        app.logger.info("Answers", answer)
+
+        #caching starts
+        cache.set(cache_key, query)
+        # print(cache_key, output)
+    except OpenAIError as e:
+        app.logger.error(e._message)
+
+    response = {
+        'content': answer.split("SOURCES: "),
     }
 
     return response
