@@ -92,4 +92,15 @@ def get_answer(docs, data):
 #     return response.text
 
 model = genai.GenerativeModel('gemini-pro')
-chat = model.start_chat(history=[])
+
+def get_answer_sub(docs, data, chat_obj):
+    if not chat_obj:
+        chat = model.start_chat(history=[])
+    else:
+        chat = model.start_chat(history=chat_obj)
+
+    query, prompt = get_prompt(data)
+    response = chat.send_message(prompt.format(
+        summaries = docs,
+        question = query))
+    return response, chat

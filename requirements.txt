@@ -11,3 +11,4 @@ kombu
 psycopg2
 google-generativeai
 flask_caching
+flask_session

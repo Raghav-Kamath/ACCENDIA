@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
 import config
-from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer
+from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer, get_answer_sub
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from openai import OpenAIError
@@ -11,6 +11,7 @@ from celery.result import AsyncResult
 from flask_caching import Cache
 
 app = Flask(__name__)
+app.secret_key = config.SECRET_KEY
 CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
 broker_host = os.getenv('RABBITMQ_HOST', 'localhost')
 app.config['CELERY_BROKER_URL'] = 'amqp://guest@localhost:5672//'
@@ -90,8 +91,9 @@ def query_task(projectID):
         raise Exception('Error: Index not found')
 
     for idx in os.listdir('./data/'+pid+'/index'):
-        task = handle_query.delay(pid, query, idx, data)
-        tasks.append(task.id)
+        # task = handle_query.delay(pid, query, idx, data)
+        task = handle_query(pid, query, idx, data)
+        # tasks.append(task.id)
     return jsonify({"task_id": tasks}), 202
 
 
@@ -101,15 +103,36 @@ def handle_query(pid, query, idx, data):
     embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
     index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
     sources = search_docs(index, query)
+    messages =[]
     try:
-        answer = get_answer(sources, data)
+        cache_key = generate_cache_key(query)
+        output = cache.get(cache_key)
+        if not (output is None):
+            return jsonify(output)
+        print(session.get('chat_obj'))
+        if session.get('chat_obj') is None:
+            chat = None
+            print("Session created")
+        else:
+            chat = session['chat_obj']
+            print("SESSION EXISTS")
+        answer, chat = get_answer_sub(sources, data, chat)
+        
+        for m in chat.history:
+            messages.append({'role':m.role, 'parts':[m.parts[0].text]})
+        session['chat_obj'] = messages
         app.logger.info("Sources", sources)
         app.logger.info("Answers", answer)
+
+        #caching starts
+        cache.set(cache_key, query)
+        # print(cache_key, output)
     except OpenAIError as e:
         app.logger.error(e._message)
 
     response = {
-        'content': answer["output_text"].split("SOURCES: ")[0],
+        # 'content': answer["output_text"].split("SOURCES: ")[0],
+        'content': answer,
     }
 
     return response
@@ -144,10 +167,16 @@ def get_status(task_id):
 
 @app.route("/api/chat_hist", methods=['GET'])
 def get_chat_history():
-    pass
+    if session.get('chat_obj') is None:
+        hist = "None"
+    else:
+        hist = session['chat_obj']
+    response = {
+            'content': hist,
+        }
+    return response
 
 if __name__ == '__main__':
-    app.secret_key = config.SECRET_KEY
     app.config['CACHE_TYPE'] = 'simple'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 0  # Persistent cache
     cache.init_app(app)
