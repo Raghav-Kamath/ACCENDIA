@@ -9,3 +9,5 @@ faiss-cpu
 langchain-openai
 kombu
 psycopg2
+google-generativeai
+flask_caching

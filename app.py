@@ -8,6 +8,7 @@ from langchain_community.vectorstores import FAISS
 from openai import OpenAIError
 from celery import Celery
 from celery.result import AsyncResult
+from flask_caching import Cache
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
@@ -17,6 +18,7 @@ app.config['CELERY_RESULT_BACKEND'] = 'db+postgresql://app:app@localhost:5432/ce
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'])
 celery.conf.update(app.config)
 celery.config_from_object('settings')
+cache = Cache()
 
 
 
@@ -134,7 +136,14 @@ def get_status(task_id):
         }
     return jsonify(response)
 
+@app.route("/api/chat_hist", methods=['GET'])
+def get_chat_history():
+    pass
+
 if __name__ == '__main__':
     app.secret_key = config.SECRET_KEY
+    app.config['CACHE_TYPE'] = 'simple'
+    app.config['CACHE_DEFAULT_TIMEOUT'] = 0  # Persistent cache
+    cache.init_app(app)
     app.run(debug=True)
 
