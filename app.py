@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
 import config
-from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer, get_answer_sub
+from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from openai import OpenAIError
@@ -116,8 +116,8 @@ def handle_query(pid, query, idx, data):
         else:
             chat = session['chat_obj']
             print("SESSION EXISTS")
-        answer, chat = get_answer_sub(sources, data, chat)
-        
+        answer, chat = get_answer(sources, data, chat)
+
         for m in chat.history:
             messages.append({'role':m.role, 'parts':[m.parts[0].text]})
         session['chat_obj'] = messages
