@@ -22,6 +22,12 @@ cache = Cache()
 
 
 
+def generate_cache_key(data):
+    cache_key_data = [data]
+    cache_key = ":".join(str(item) for item in cache_key_data)
+
+    return cache_key
+
 @app.route('/api/upload/<project_id>', methods=['POST'])
 def upload_task(project_id):
     app.logger.info("Request files below")
