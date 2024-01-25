@@ -23,33 +23,31 @@ celery.config_from_object('settings')
 cache = Cache()
 
 
-
 def generate_cache_key(data):
     cache_key_data = [data]
     cache_key = ":".join(str(item) for item in cache_key_data)
 
     return cache_key
 
-@app.route('/api/upload/<project_id>', methods=['POST'])
-def upload_task(project_id):
+@app.route('/api/upload/<model>/<project_id>', methods=['POST'])
+def upload_task(model, project_id):
     app.logger.info("Request files below")
     app.logger.info(request.files)
     pid = project_id
     files = request.files.getlist('file')
-    data = request.get_json()
-    session['model'] = data['model']
+    session['model'] = model
     if pid == '':
         return jsonify({"content": "Error: Empty pid"}), 400
     for file in files:
         if file.filename == '':
             return jsonify({"content": "Error: Empty file"}), 400
 
-    result = upload_pdf(files, pid)
+    result = upload_pdf(files, pid, model)
     return jsonify({"content": "File is being uploaded and extracted", 'tasks': result}), 202
 
 
 @celery.task(name='app.upload_pdf', compression='zlib')
-def upload_pdf(files, pid):
+def upload_pdf(files, pid, model):
     tasks = []
     if pid == '':
         raise Exception('Error: Empty pid')
@@ -64,24 +62,24 @@ def upload_pdf(files, pid):
         file.save(os.path.join(save_dir, file.filename))
         filepath = os.path.join(save_dir, file.filename)
         app.logger.info("File uploaded successfully")
-        task = extract_content.delay({'filepath': filepath}, pid)
+        task = extract_content.delay({'filepath': filepath}, pid, model)
         tasks.append(task.id)
     return tasks
 
 @celery.task(name='app.extract_content', compression='zlib')
-def extract_content(data, pid):
+def extract_content(data, pid, model):
     with app.app_context():
         global index, doc
         filepath = data['filepath']
-        app.logger.info("Extracting content from file: " + filepath)
+        app.logger.info("Extracting content from file("+model+"): " + filepath)
         doc = parse_pdf(filepath)
         text = text_to_docs(doc)
-        if session.get('model') is not None:
-            if session.get('model') == "genai":
-                index = genai_embed_docs(text)
-            else:
-                index = embed_docs(text)
+        if model == "openai":
+            index = embed_docs(text)
+        else:
+            index = genai_embed_docs(text)
         index.save_local('./data/'+pid+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
+        os.remove(filepath)
         response = {
             'content': 'PDF extracted successfully',
         }
@@ -98,12 +96,16 @@ def query_task(projectID):
         raise Exception('Error: Index not found')
 
     for idx in os.listdir('./data/'+pid+'/index'):
-        # task = handle_query.delay(pid, query, idx, data)
-        task = handle_query(pid, query, idx, data)
-        # tasks.append(task.id)
+        if session.get('model') == "openai":
+            task = handle_query.delay(pid, query, idx, data)
+        else:
+            task = genai_handle_query.delay(pid, query, idx, data)
+        # task = handle_query(pid, query, idx, data)
+        tasks.append(task.id)
     return jsonify({"task_id": tasks}), 202
 
 
+#OpenAI_Handle query
 @celery.task(name='app.handle_query', compression='zlib')
 def handle_query(pid, query, idx, data):
     # Handle context passing into get_answer func
@@ -125,9 +127,7 @@ def handle_query(pid, query, idx, data):
             print("Session exists")
         answer, chat = get_answer(sources, data, chat)
 
-        for m in chat.history:
-            messages.append({'role':m.role, 'parts':[m.parts[0].text]})
-        session['chat_obj'] = messages
+        session['chat_obj'] = chat
         app.logger.info("Sources", sources)
         app.logger.info("Answers", answer)
 
@@ -225,5 +225,5 @@ if __name__ == '__main__':
     app.config['CACHE_TYPE'] = 'simple'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 0  # Persistent cache
     cache.init_app(app)
-    app.run(debug=True)
+    app.run(host='0.0.0.0',port=8000,debug=True)
 
