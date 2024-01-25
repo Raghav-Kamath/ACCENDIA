@@ -106,6 +106,34 @@ def handle_query(pid, query, idx, data):
 
     return response
 
+@app.route("/api/tasks/<task_id>", methods=['GET'])
+def get_status(task_id):
+    task = AsyncResult(task_id, app=celery)
+    if task.state == 'PENDING':
+        # job did not start yet
+        response = {
+            'state': task.state,
+            "task_id": task_id,
+            "task_result": "Pending"
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            "task_id": task_id,
+            "task_status": task.status,
+            "task_result": task.result
+        }
+        if 'result' in task.info:
+            response['result'] = task.result
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task.state,
+            'current': 1,
+            'status': str(task.info),  # this is the exception raised
+        }
+    return jsonify(response)
+
 if __name__ == '__main__':
     app.secret_key = config.SECRET_KEY
     app.run(debug=True)
