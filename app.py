@@ -9,6 +9,7 @@ from openai import OpenAIError
 from celery import Celery
 from celery.result import AsyncResult
 from flask_caching import Cache
+from genai_utils import genai_embed_docs, genai_get_answer, genai_search_docs
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
@@ -35,6 +36,8 @@ def upload_task(project_id):
     app.logger.info(request.files)
     pid = project_id
     files = request.files.getlist('file')
+    data = request.get_json()
+    session['model'] = data['model']
     if pid == '':
         return jsonify({"content": "Error: Empty pid"}), 400
     for file in files:
@@ -73,7 +76,11 @@ def extract_content(data, pid):
         app.logger.info("Extracting content from file: " + filepath)
         doc = parse_pdf(filepath)
         text = text_to_docs(doc)
-        index = embed_docs(text)
+        if session.get('model') is not None:
+            if session.get('model') == "genai":
+                index = genai_embed_docs(text)
+            else:
+                index = embed_docs(text)
         index.save_local('./data/'+pid+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
         response = {
             'content': 'PDF extracted successfully',
@@ -115,7 +122,7 @@ def handle_query(pid, query, idx, data):
             print("Session created")
         else:
             chat = session['chat_obj']
-            print("SESSION EXISTS")
+            print("Session exists")
         answer, chat = get_answer(sources, data, chat)
 
         for m in chat.history:

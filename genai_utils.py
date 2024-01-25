@@ -7,12 +7,12 @@ from langchain_community.vectorstores import FAISS
 model = genai.GenerativeModel('gemini-pro')
 
 def genai_embed_docs(docs):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", task_type="retrieval_document")
     index = FAISS.from_documents(docs, embeddings)
     return index
 
 def genai_search_docs(index, query):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", task_type="retrieval_query")
     
     embeded_vector = embeddings.embed_query(query)
     docs = index.similarity_search_by_vector(embeded_vector, k=5)
