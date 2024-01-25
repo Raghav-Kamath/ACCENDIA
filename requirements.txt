@@ -8,3 +8,4 @@ tiktoken
 faiss-cpu
 langchain-openai
 kombu
+psycopg2
