@@ -11,6 +11,6 @@ kombu
 psycopg2-binary
 google-generativeai
 flask_caching
-langchain_google_genai
+langchain-google-genai
 nltk
 textblob
