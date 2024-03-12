@@ -94,7 +94,8 @@ def query_task(projectID):
         # task = handle_query.delay(pid, query, idx, data)
         task = handle_query(pid, query, idx, data)
         # tasks.append(task.id)
-    return jsonify({"task_id": tasks}), 202
+    # return jsonify({"task_id": tasks}), 202
+    return task, 202
 
 
 @celery.task(name='app.handle_query', compression='zlib')
@@ -104,36 +105,52 @@ def handle_query(pid, query, idx, data):
     index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
     sources = search_docs(index, query)
     messages =[]
-    try:
-        cache_key = generate_cache_key(query)
-        output = cache.get(cache_key)
-        if not (output is None):
-            return jsonify(output)
-        print(session.get('chat_obj'))
-        if session.get('chat_obj') is None:
-            chat = None
-            print("Session created")
-        else:
-            chat = session['chat_obj']
-            print("SESSION EXISTS")
-        answer, chat = get_answer_sub(sources, data, chat)
+    # FOR GENAI IMPLEMENTATION
+    # try:
+    #     cache_key = generate_cache_key(query)
+    #     output = cache.get(cache_key)
+    #     if not (output is None):
+    #         return jsonify(output)
+    #     print(session.get('chat_obj'))
+    #     if session.get('chat_obj') is None:
+    #         chat = None
+    #         print("Session created")
+    #     else:
+    #         chat = session['chat_obj']
+    #         print("SESSION EXISTS")
+    #     answer, chat = get_answer_sub(sources, data, chat)
+    #     # answer = get_answer_sub(sources, data)
         
-        for m in chat.history:
-            messages.append({'role':m.role, 'parts':[m.parts[0].text]})
-        session['chat_obj'] = messages
+    #     for m in chat.history:
+    #         messages.append({'role':m.role, 'parts':[m.parts[0].text]})
+    #     session['chat_obj'] = messages
+    #     app.logger.info("Sources", sources)
+    #     app.logger.info("Answers", answer)
+
+    #     #caching starts
+    #     cache.set(cache_key, query)
+    #     # print(cache_key, output)
+    # except OpenAIError as e:
+    #     app.logger.error(e._message)
+    
+    # response = {
+    #     # 'content': answer["output_text"].split("SOURCES: ")[0],
+    #     'content': answer,
+    # }
+    
+    #GENAI IMPL ENDS HERE
+    #OPENAI IMPL BEGINS
+    try:
+        answer = get_answer(sources, data)
         app.logger.info("Sources", sources)
         app.logger.info("Answers", answer)
-
-        #caching starts
-        cache.set(cache_key, query)
-        # print(cache_key, output)
     except OpenAIError as e:
         app.logger.error(e._message)
-
     response = {
-        # 'content': answer["output_text"].split("SOURCES: ")[0],
-        'content': answer,
+        'content': answer["output_text"].split("SOURCES: ")[0],
     }
+
+    
 
     return response
 

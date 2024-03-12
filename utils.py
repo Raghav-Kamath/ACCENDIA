@@ -103,4 +103,4 @@ def get_answer_sub(docs, data, chat_obj):
     response = chat.send_message(prompt.format(
         summaries = docs,
         question = query))
-    return response, chat
+    return response.text, chat
