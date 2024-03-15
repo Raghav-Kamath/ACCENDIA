@@ -8,7 +8,9 @@ tiktoken
 faiss-cpu
 langchain-openai
 kombu
-psycopg2
+psycopg2-binary
 google-generativeai
 flask_caching
-flask_session
+langchain-google-genai
+nltk
+textblob
