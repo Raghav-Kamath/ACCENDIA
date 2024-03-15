@@ -2,14 +2,13 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
 import config
-from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer
+from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer, get_answer_sub
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from openai import OpenAIError
 from celery import Celery
 from celery.result import AsyncResult
 from flask_caching import Cache
-from genai_utils import genai_embed_docs, genai_get_answer, genai_search_docs
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
@@ -67,22 +66,19 @@ def upload_pdf(files, pid, model):
     return tasks
 
 @celery.task(name='app.extract_content', compression='zlib')
-def extract_content(data, pid, model):
+def extract_content(data, pid):
     with app.app_context():
         global index, doc
         filepath = data['filepath']
-        app.logger.info("Extracting content from file("+model+"): " + filepath)
+        app.logger.info("Extracting content from file: " + filepath)
         doc = parse_pdf(filepath)
         text = text_to_docs(doc)
-        if model == "openai":
-            index = embed_docs(text)
-        else:
-            index = genai_embed_docs(text)
+        index = embed_docs(text)
         index.save_local('./data/'+pid+'/index/'+os.path.splitext(os.path.basename(filepath))[0])
-        os.remove(filepath)
         response = {
             'content': 'PDF extracted successfully',
-        }
+         }
+        
         return response
 
 @app.route('/api/<model>/<projectID>/query', methods=['POST'])
