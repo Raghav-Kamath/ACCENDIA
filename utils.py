@@ -97,10 +97,15 @@ def get_answer_sub(docs, data, chat_obj):
     if not chat_obj:
         chat = model.start_chat(history=[])
     else:
-        chat = model.start_chat(history=chat_obj)
+        hist = []
+        for i in range(len(chat_obj)):
+                hist.append({'role': 'user', 'parts': [chat_obj[i][0]]})
+                hist.append({'role': 'model', 'parts': [chat_obj[i][1]]})
+        chat = model.start_chat(history=hist)
 
+    chat = model.start_chat(history=[]) #Remove later when fixed
     query, prompt = get_prompt(data)
     response = chat.send_message(prompt.format(
         summaries = docs,
         question = query))
-    return response.text, chat
+    return response.text
