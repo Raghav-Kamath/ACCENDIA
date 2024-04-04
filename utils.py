@@ -7,6 +7,7 @@ import os
 from langchain_community.vectorstores import FAISS
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from prompt import get_prompt
+import google.generativeai as genai
 
 def parse_pdf(file):
     pdf = PdfReader(file)
