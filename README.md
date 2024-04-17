@@ -107,7 +107,7 @@ Further, the system's functionality relies on a robust document search mechanism
  
 In essence, the methodology woven into ACCENDIA's framework assumes a sequential and nuanced approach, encompassing document detection, content extraction, segmentation, embedding generation, and efficient retrieval. The success of each step is pivotal, as they collectively drive the system's ability to handle diverse document types, provide accurate representations, and deliver pertinent responses to user queries. Adjustments or refinements in these stages can significantly impact ACCENDIA's efficacy and performance.
 
-##Output:
+## Output:
 Gradio Interface:
 1. Upload File
 ![Snippet of the demonstrative UI (Upload file)](https://github.com/Raghav-Kamath/ACCENDIA/assets/71326720/4f636892-1c83-4b12-a388-32d2fb8d9ef8)
