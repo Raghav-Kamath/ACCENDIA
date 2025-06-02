@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 208 100% 97%; /* #F0F8FF - Very Light Indigo (AliceBlue) */
+    --foreground: 271 100% 10%; /* #1A0033 - Dark Indigo */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 271 100% 10%; /* Dark Indigo */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 271 100% 10%;
+
+    --primary: 271 100% 25%; /* #4B0082 - Deep Indigo */
+    --primary-foreground: 0 0% 98%; /* Off-white for text on primary */
+
+    --secondary: 271 50% 90%; /* Lighter Indigo for secondary elements */
+    --secondary-foreground: 271 100% 25%; /* Deep Indigo for text on secondary */
+
+    --muted: 271 30% 95%; /* Very light, muted indigo */
+    --muted-foreground: 271 20% 50%; /* Muted indigo text */
+
+    --accent: 271 76% 53%; /* #8A2BE2 - BlueViolet */
+    --accent-foreground: 0 0% 100%; /* White for text on accent */
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 271 20% 87%; /* #D0CDE1 - Light Indigo Border */
+    --input: 271 20% 87%;
+    --ring: 271 76% 53%; /* Accent color for focus rings */
+    
+    --chart-1: 271 76% 53%;
+    --chart-2: 271 100% 70%;
+    --chart-3: 271 100% 25%;
+    --chart-4: 208 100% 70%;
+    --chart-5: 208 100% 50%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific theme */
+    --sidebar-background: 271 100% 12%; /* Slightly lighter than main dark bg */
+    --sidebar-foreground: 208 100% 90%; /* Lighter text for dark sidebar */
+    --sidebar-primary: 271 76% 60%; /* Accent color as primary for sidebar */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 271 76% 45%; /* Darker accent for hover states */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 271 20% 25%;
+    --sidebar-ring: 271 76% 60%;
+  }
+
+  .dark {
+    --background: 271 100% 10%; /* Dark Indigo */
+    --foreground: 208 100% 97%; /* Very Light Indigo */
+
+    --card: 271 100% 15%; /* Slightly lighter Dark Indigo */
+    --card-foreground: 208 100% 97%;
+
+    --popover: 271 100% 15%;
+    --popover-foreground: 208 100% 97%;
+
+    --primary: 271 76% 60%; /* Lighter BlueViolet for dark mode primary */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 271 50% 25%; /* Darker muted Indigo */
+    --secondary-foreground: 208 100% 97%;
+
+    --muted: 271 30% 20%;
+    --muted-foreground: 271 20% 70%;
+
+    --accent: 271 100% 70%; /* Lighter Violet for accent in dark mode */
+    --accent-foreground: 271 100% 10%; /* Dark Indigo */
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 271 20% 30%;
+    --input: 271 20% 30%;
+    --ring: 271 100% 70%;
+
+    /* Dark Sidebar specific theme */
+    --sidebar-background: 271 100% 8%; 
+    --sidebar-foreground: 208 100% 92%; 
+    --sidebar-primary: 271 76% 65%; 
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 271 76% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 271 20% 20%;
+    --sidebar-ring: 271 76% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Enable smooth scrolling for a better UX */
+    scroll-behavior: smooth;
+  }
+  /* Add subtle transition to all elements for a smoother feel */
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}

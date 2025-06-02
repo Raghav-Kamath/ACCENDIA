@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app
+      - POSTGRES_DB=celery
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  celery_worker:
+    build: .
+    command: celery -A app.celery worker --loglevel=INFO
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=db+postgresql://app:app@postgres:5432/celery
+    depends_on:
+      - rabbitmq
+      - postgres
+      - backend
+
+  backend:
+    build: .
+    command: python app.py
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=db+postgresql://app:app@postgres:5432/celery
+      - DATABASE_URL=postgresql://app:app@postgres:5432/celery
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  frontend:
+    build: 
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  rabbitmq_data:
+  postgres_data: 

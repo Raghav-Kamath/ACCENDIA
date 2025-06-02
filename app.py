@@ -10,12 +10,17 @@ from celery import Celery
 from celery.result import AsyncResult
 from flask_caching import Cache
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
-CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
+CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'], supports_credentials=True,)
 broker_host = os.getenv('RABBITMQ_HOST', 'localhost')
 app.config['CELERY_BROKER_URL'] = 'amqp://guest@localhost:5672//'
 app.config['CELERY_RESULT_BACKEND'] = 'db+postgresql://app:app@localhost:5432/celery'
@@ -33,20 +38,31 @@ def generate_cache_key(data):
 
 @app.route('/api/upload/<model>/<project_id>', methods=['POST'])
 def upload_task(model, project_id):
-    app.logger.info("Request files below")
-    app.logger.info(request.files)
+    logger.debug("Received upload request")
+    logger.debug(f"Request files: {request.files}")
+    logger.debug(f"Request headers: {request.headers}")
+    
     pid = project_id
-    app.logger.info("API Key inside task:", os.getenv('OPENAI_API_KEY'))
+    logger.debug(f"API Key inside task: {os.getenv('OPENAI_API_KEY')}")
     files = request.files.getlist('file')
     session['model'] = model
+    
     if pid == '':
+        logger.error("Empty project ID")
         return jsonify({"content": "Error: Empty pid"}), 400
+        
     for file in files:
         if file.filename == '':
+            logger.error("Empty file received")
             return jsonify({"content": "Error: Empty file"}), 400
 
-    result = upload_pdf(files, pid, model)
-    return jsonify({"content": "File is being uploaded and extracted", 'tasks': result}), 202
+    try:
+        result = upload_pdf(files, pid, model)
+        logger.debug(f"Upload successful, tasks: {result}")
+        return jsonify({"content": "File is being uploaded and extracted", 'tasks': result}), 202
+    except Exception as e:
+        logger.error(f"Upload error: {str(e)}")
+        return jsonify({"content": f"Error: {str(e)}"}), 500
 
 
 @celery.task(name='app.upload_pdf', compression='zlib')
@@ -87,25 +103,38 @@ def extract_content(data, pid, model):
 
 @app.route('/api/<model>/<projectID>/query', methods=['POST'])
 def query_task(projectID, model):
+    logger.debug("Received query request")
+    logger.debug(f"Request data: {request.get_json()}")
+    
     data = request.get_json()
     tasks = []
     model_type = model
     pid, query = projectID, data['prompt']
     hist = data['chat_history']
-    app.logger.info("Query is ")
-    app.logger.info(query)
+    
+    logger.debug(f"Query: {query}")
+    logger.debug(f"Project ID: {pid}")
+    
     if pid == '':
+        logger.error("Empty project ID")
         raise Exception('Error: Empty pid')
+        
     if not os.path.exists('./data/'+pid+'/index'):
+        logger.error("Index not found")
         raise Exception('Error: Index not found')
 
-    for idx in os.listdir('./data/'+pid+'/index'):
-        # task = handle_query.delay(pid, query, idx, data)
-        task = handle_query(pid, query, idx, data, model_type, hist)
-        tasks.append(task)
-        print("TASK IS ",tasks)
-    return jsonify({"payload": tasks}), 202
-    # return task, 202
+    try:
+        for idx in os.listdir('./data/'+pid+'/index'):
+            # task = handle_query.delay(pid, query, idx, data)
+            for idx in os.listdir('./data/'+pid+'/index'):
+            # task = handle_query.delay(pid, query, idx, data)
+                task = handle_query(pid, query, idx, data, model_type, hist)
+                tasks.append(task)
+                logger.debug(f"Task result: {task}")
+            return jsonify({"payload": tasks}), 202
+    except Exception as e:
+        logger.error(f"Query error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 
@@ -166,9 +195,13 @@ def handle_query(pid, query, idx, data, model='gemini', hist=None):
 
 @app.route("/api/tasks/<task_id>", methods=['GET'])
 def get_status(task_id):
+    logger.debug(f"Checking task status for: {task_id}")
     task = AsyncResult(task_id, app=celery)
+    
+    logger.debug(f"Task state: {task.state}")
+    logger.debug(f"Task info: {task.info}")
+    
     if task.state == 'PENDING':
-        # job did not start yet
         response = {
             'state': task.state,
             "task_id": task_id,
@@ -184,18 +217,23 @@ def get_status(task_id):
         if 'result' in task.info:
             response['result'] = task.result
     else:
-        # something went wrong in the background job
         response = {
             'state': task.state,
             'current': 1,
-            'status': str(task.info),  # this is the exception raised
+            'status': str(task.info),
         }
+    
+    logger.debug(f"Task status response: {response}")
     return jsonify(response)
 
+@app.route('/api/test', methods=['GET'])
+def test_connection():
+    logger.debug("Test endpoint called")
+    return jsonify({"status": "ok", "message": "Connection successful"})
 
 if __name__ == '__main__':
     app.config['CACHE_TYPE'] = 'simple'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 0  # Persistent cache
     cache.init_app(app)
-    app.run()
+    app.run(debug=True, host='0.0.0.0', port=8000)
 
