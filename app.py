@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
-import config
+from dotenv import load_dotenv
 from utils import parse_pdf, text_to_docs, embed_docs, search_docs, get_answer, get_answer_sub
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -9,9 +9,12 @@ from openai import OpenAIError
 from celery import Celery
 from celery.result import AsyncResult
 from flask_caching import Cache
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = config.SECRET_KEY
+app.secret_key = os.getenv('SECRET_KEY')
 CORS(app, origins="*", methods=['GET', 'POST', 'OPTIONS'])
 broker_host = os.getenv('RABBITMQ_HOST', 'localhost')
 app.config['CELERY_BROKER_URL'] = 'amqp://guest@localhost:5672//'
@@ -33,6 +36,7 @@ def upload_task(model, project_id):
     app.logger.info("Request files below")
     app.logger.info(request.files)
     pid = project_id
+    app.logger.info("API Key inside task:", os.getenv('OPENAI_API_KEY'))
     files = request.files.getlist('file')
     session['model'] = model
     if pid == '':
@@ -66,7 +70,7 @@ def upload_pdf(files, pid, model):
     return tasks
 
 @celery.task(name='app.extract_content', compression='zlib')
-def extract_content(data, pid):
+def extract_content(data, pid, model):
     with app.app_context():
         global index, doc
         filepath = data['filepath']
@@ -88,6 +92,8 @@ def query_task(projectID, model):
     model_type = model
     pid, query = projectID, data['prompt']
     hist = data['chat_history']
+    app.logger.info("Query is ")
+    app.logger.info(query)
     if pid == '':
         raise Exception('Error: Empty pid')
     if not os.path.exists('./data/'+pid+'/index'):
@@ -105,10 +111,13 @@ def query_task(projectID, model):
 
 #OpenAI_Handle query
 @celery.task(name='app.handle_query', compression='zlib')
-def handle_query(pid, query, idx, data, model='gpt', hist=None):
+def handle_query(pid, query, idx, data, model='gemini', hist=None):
     # Handle context passing into get_answer func
-    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
-    index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
+    embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",
+            task_type="retrieval_document"
+        )
+    index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings, allow_dangerous_deserialization=True)
     sources = search_docs(index, query)
     messages =[]
     # FOR GENAI IMPLEMENTATION
@@ -120,10 +129,6 @@ def handle_query(pid, query, idx, data, model='gpt', hist=None):
                 # return jsonify(output)
             
             answer = get_answer_sub(sources, data, hist)
-            # answer = get_answer_sub(sources, data)
-            
-            # for m in chat.history:
-            #     messages.append({'role':m.role, 'parts':[m.parts[0].text]})
             session['chat_obj'] = messages
             app.logger.info("Sources", sources)
             app.logger.info("Answers", answer)
@@ -145,6 +150,7 @@ def handle_query(pid, query, idx, data, model='gpt', hist=None):
     #OPENAI IMPL BEGINS
     else:
         try:
+            app.logger.info("OTHER INVOKEDd")
             answer = get_answer(sources, data)
             app.logger.info("Sources", sources)
             app.logger.info("Answers", answer)

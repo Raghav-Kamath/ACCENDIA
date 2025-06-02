@@ -4,7 +4,7 @@ import gradio as gr
 import requests
 import json
 
-server_host = "http://127.0.0.1:5000"
+server_host = "http://127.0.0.1:8000"
 
 def download_pdf(url, output_path):
     urllib.request.urlretrieve(url, output_path)
@@ -52,7 +52,7 @@ def get_query(chat_history, url, question, openAI_key, model, project_id='P1'):
         if question.strip() == '':
             gr.Warning( '[ERROR]: Question field is empty')
             return
-        
+        print("Project ID: ", project_id)
         _data = {"prompt": question,
                       "chat_history": chat_history
                       }
@@ -63,7 +63,7 @@ def get_query(chat_history, url, question, openAI_key, model, project_id='P1'):
             
         print(r.json())
         answer = r.json()['payload']
-        answer = '\n\n'.join(i for i in answer)
+        answer = '\n*********\n'.join(i for i in answer)
         print(answer)
             # answer = generate_answer_text_davinci_003(question, openAI_key)
         
@@ -71,7 +71,7 @@ def get_query(chat_history, url, question, openAI_key, model, project_id='P1'):
         chat_history.append([question, answer])
         print(chat_history)
     except Exception as e:
-        gr.Warning(e)
+        gr.Warning(str(e))
 
     return chat_history
 
@@ -133,13 +133,13 @@ with gr.Blocks(css="""#chatbot { font-size: 14px; min-height: 1200; }""") as dem
     # Bind the click event of the button to the question_answer function
     btn.click(
         question_answer,
-        inputs=[chatbot, url, file, question, openAI_key],
+        inputs=[chatbot, url, file, question, openAI_key, project_id],
         outputs=chatbot,
     )
 
     btn2.click(
         get_query,
-        inputs=[chatbot, url, question, openAI_key, model],
+        inputs=[chatbot, url, question, openAI_key, model, project_id],
         outputs=chatbot,
     )
 
