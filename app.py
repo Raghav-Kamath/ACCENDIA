@@ -197,5 +197,5 @@ if __name__ == '__main__':
     app.config['CACHE_TYPE'] = 'simple'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 0  # Persistent cache
     cache.init_app(app)
-    app.run(host='0.0.0.0',port=8000,debug=True)
+    app.run()
 
