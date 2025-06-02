@@ -3,3 +3,5 @@ data
 config.py
 *.pptx
 *.docx
+.env
+*.pyc

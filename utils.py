@@ -4,10 +4,16 @@ from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, OpenAI
 import os
+from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from prompt import get_prompt
+from openai import OpenAI
 import google.generativeai as genai
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+
+load_dotenv()
+
 
 def parse_pdf(file):
     pdf = PdfReader(file)
@@ -22,6 +28,7 @@ def parse_pdf(file):
         text = re.sub(r"\n\s*\n", "\n\n", text)
 
         output.append(text)
+    print('File parsed successfully')
 
     return output
 
@@ -58,12 +65,14 @@ def text_to_docs(text):
     return doc_chunks
 
 def embed_docs(docs):
-    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
+    # embeddings = OpenAIEmbeddings(openai_api_key=os.getenv('OPENAI_API_KEY'), model="text-embedding-3-small")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", task_type="retrieval_document")
     index = FAISS.from_documents(docs, embeddings)
     return index
 
 def search_docs(index, query):
-    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])  # type: ignore
+    # embeddings = OpenAIEmbeddings(openai_api_key=os.getenv('OPENAI_API_KEY'), model="text-embedding-3-small")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", task_type="retrieval_query")
 
     embeded_vector = embeddings.embed_query(query)
     docs = index.similarity_search_by_vector(embeded_vector, k=5)
@@ -71,12 +80,25 @@ def search_docs(index, query):
 
 def get_answer(docs, data):
     query, prompt = get_prompt(data)
-    chain = load_qa_with_sources_chain(OpenAI(temperature=0, openai_api_key=os.environ['OPENAI_API_KEY']), chain_type="stuff", prompt=prompt)
-    answer = chain(
-        {"input_documents": docs, "question": query, "query": query}, return_only_outputs=True
+
+    # 2. Initialize the Google Generative AI chat model
+    # You can choose different models like "gemini-1.5-flash-latest", "gemini-1.5-pro-latest", etc.
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash", # A good general-purpose model
+        temperature=0,      # For more deterministic, factual answers
+        google_api_key=os.getenv('GOOGLE_API_KEY')
     )
+
+    chain = load_qa_with_sources_chain(
+        llm,
+        chain_type="stuff",
+        prompt=prompt,
+    )
+
+    input_payload = {"input_documents": docs, "question": query}
+    answer_output = chain(input_payload, return_only_outputs=True)
     
-    return answer
+    return answer_output
 
 # project_id = "1"
 # location = "us-central1"
@@ -89,7 +111,7 @@ def get_answer(docs, data):
 #     response = chat.send_message(prompt)
 #     return response.text
 
-model = genai.GenerativeModel('gemini-1.5-pro-latest')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 def get_answer_sub(docs, data, chat_obj):
     if not chat_obj:
