@@ -89,7 +89,7 @@ def get_answer(docs, data):
 #     response = chat.send_message(prompt)
 #     return response.text
 
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 def get_answer_sub(docs, data, chat_obj):
     if not chat_obj:

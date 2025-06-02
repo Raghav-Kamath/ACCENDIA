@@ -66,7 +66,7 @@ def upload_pdf(files, pid, model):
     return tasks
 
 @celery.task(name='app.extract_content', compression='zlib')
-def extract_content(data, pid):
+def extract_content(data, pid, model):
     with app.app_context():
         global index, doc
         filepath = data['filepath']
@@ -105,7 +105,7 @@ def query_task(projectID, model):
 
 #OpenAI_Handle query
 @celery.task(name='app.handle_query', compression='zlib')
-def handle_query(pid, query, idx, data, model='gpt', hist=None):
+def handle_query(pid, query, idx, data, model='gemini', hist=None):
     # Handle context passing into get_answer func
     embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
     index = FAISS.load_local('./data/'+pid+'/index/'+idx, embeddings)
