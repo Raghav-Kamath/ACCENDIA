@@ -1,4 +1,3 @@
-
 # ACCENDIA
 
 Advanced Chatbot for Customized Engagement and Navigation in Database Interaction
@@ -25,6 +24,61 @@ To install the ACCENDIA, please follow these steps:
 5. Obtain an API key from OpenAI and add it to the `.env` file in the project directory.
 ```commandline
 OPENAI_API_KEY=your_secret_api_key
+```
+
+## Docker Setup
+-------------
+ACCENDIA can be run using Docker for easier deployment. The project includes two Dockerfiles:
+1. Main application (`Dockerfile`)
+2. Frontend UI (`ui/Dockerfile`)
+
+### Prerequisites
+- Docker and Docker Compose installed on your system
+- OpenAI API key
+
+### Running with Docker
+
+1. Create a `.env` file in the project root with your OpenAI API key:
+```commandline
+OPENAI_API_KEY=your_secret_api_key
+```
+
+2. Build and run the containers using Docker Compose:
+```bash
+docker-compose up --build
+```
+
+This will start:
+- The main ACCENDIA application on port 8000
+- The frontend UI on port 3000
+- Required services (RabbitMQ and PostgreSQL)
+
+3. Access the application:
+- Frontend UI: http://localhost:3000
+- Backend API: http://localhost:8000
+
+### Manual Docker Build (Alternative)
+
+If you prefer to build and run containers separately:
+
+1. Build the main application:
+```bash
+docker build -t accendia-backend .
+```
+
+2. Build the frontend:
+```bash
+cd ui
+docker build -t accendia-frontend .
+```
+
+3. Run the containers:
+```bash
+# Run backend
+docker run -p 8000:8000 --env-file .env accendia-backend
+
+# Run frontend
+docker run -p 3000:3000 accendia-frontend
 ```
 
 ## Usage
